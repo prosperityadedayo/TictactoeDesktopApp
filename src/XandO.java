@@ -28,7 +28,11 @@ public class XandO {
     JButton btn8 = new JButton();
     JButton btn9 = new JButton();
 
+    int[] winningLine = null;
+
     JPanel myFrame = new JPanel((new GridLayout(3, 3)));
+
+    JPanel overlay;
 
     JFrame nameWindow = new JFrame("Enter Player Names");
     JTextField playerOneNameField = new JTextField(15);
@@ -146,12 +150,44 @@ public class XandO {
         btn7.addActionListener(e -> playerMove(btn7, 7));
         btn8.addActionListener(e -> playerMove(btn8, 8));
         btn9.addActionListener(e -> playerMove(btn9, 9));
+
+        overlay = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (winningLine != null) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setColor(Color.YELLOW);
+                    g2.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+                    Point p1 = getButtonCenter(winningLine[0], this);
+                    Point p2 = getButtonCenter(winningLine[2], this);
+
+                    g2.drawLine(p1.x, p1.y, p2.x, p2.y);
+                    g2.dispose();
+                }
+            }
+
+            // Make overlay transparent to mouse events so clicks go to underlying buttons
+            @Override
+            public boolean contains(int x, int y) {
+                return false;
+            }
+        };
+        overlay.setOpaque(false);
+
+        windows.setGlassPane(overlay);
+        overlay.setVisible(false);
+
+        windows.getContentPane().removeAll();
         windows.add(myFrame);
         windows.setSize(300, 300);
         windows.setVisible(true);
         windows.setLocationRelativeTo(null); // Center the game window
 
     }
+
+
     void playerMove(JButton btn, int position) {
         if (flag == 0) {
             playerOne.add(position);
@@ -160,11 +196,14 @@ public class XandO {
             btn.setEnabled(false);
             flag = 1;
             checkWin();
-            if (computerMode) {
+            if (computerMode && !isGameOver()) {
                 // Only make computer move if the game isn't already over
-                if (!isGameOver()) {
+                Timer t = new Timer(250, e -> {
+                    ((Timer) e.getSource()).stop();
                     makeComputerMove();
-                }
+                });
+                t.setRepeats(false);
+                t.start();
             }
         } else {
             playertwo.add(position);
@@ -190,19 +229,36 @@ public class XandO {
     void checkWin() {
         if (checkWinConditionOnly(playerOne)) {
             playerOneWins++;
-            JOptionPane.showMessageDialog(null, playerOneName + " Wins!");
-            disableAllButtons();
-            askToPlayAgain();
+            winningLine = getWinningCombination(playerOne);
+            // show overlay and repaint so the line appears on top
+            if (overlay != null) {
+                overlay.setVisible(true);
+                overlay.repaint();
+            }
+            // small pause to let the line draw before the dialog
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(null, playerOneName + " Wins!");
+                disableAllButtons();
+                askToPlayAgain();
+            });
             return;
 
         }
         if (checkWinConditionOnly(playertwo)) {
             playerTwoWins++;
-            JOptionPane.showMessageDialog(null, playerTwoName + " Wins!");
-            disableAllButtons();
-            askToPlayAgain();
+            winningLine = getWinningCombination(playerOne);
+            // show overlay and repaint so the line appears on top
+            if (overlay != null) {
+                overlay.setVisible(true);
+                overlay.repaint();
+            }
+            // small pause to let the line draw before the dialog
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(null, playerOneName + " Wins!");
+                disableAllButtons();
+                askToPlayAgain();
+            });
             return;
-
         }
         if ((playerOne.size() + playertwo.size()) == 9) {
             draws++;
@@ -230,6 +286,21 @@ public class XandO {
         return false;
     }
 
+    int[] getWinningCombination(ArrayList<Integer> moves) {
+        int[][] winCombinations = {
+                {1, 2, 3}, {4, 5, 6}, {7, 8, 9},
+                {1, 4, 7}, {2, 5, 8}, {3, 6, 9},
+                {1, 5, 9}, {3, 5, 7}
+        };
+        for (int[] combo : winCombinations) {
+            if (moves.contains(combo[0]) &&
+                    moves.contains(combo[1]) &&
+                    moves.contains(combo[2])) {
+                return combo;
+            }
+        }
+        return null;
+    }
 
     void askToPlayAgain() {
         int choice = JOptionPane.showConfirmDialog(null, "Do you want to play again?", "Play Again?", JOptionPane.YES_NO_OPTION);
@@ -253,6 +324,11 @@ public class XandO {
         // Clear player moves
         playerOne.clear();
         playertwo.clear();
+        winningLine = null;
+        if (overlay != null) {
+            overlay.setVisible(false);
+            overlay.repaint();
+        }
 
         // Reset turn flag
         flag = 0;
@@ -354,4 +430,13 @@ public class XandO {
         }
         return null;
     }
+
+    Point getButtonCenter(int position, Component relativeTo) {
+        JButton btn = getButton(position);
+        if (btn == null) return new Point(0, 0);
+        return SwingUtilities.convertPoint(btn, btn.getWidth() / 2, btn.getHeight() / 2, relativeTo);
+    }
 }
+
+
+
