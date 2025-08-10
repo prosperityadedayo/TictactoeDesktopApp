@@ -246,7 +246,7 @@ public class XandO {
         }
         if (checkWinConditionOnly(playertwo)) {
             playerTwoWins++;
-            winningLine = getWinningCombination(playerOne);
+            winningLine = getWinningCombination(playertwo);
             // show overlay and repaint so the line appears on top
             if (overlay != null) {
                 overlay.setVisible(true);
@@ -254,7 +254,7 @@ public class XandO {
             }
             // small pause to let the line draw before the dialog
             SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(null, playerOneName + " Wins!");
+                JOptionPane.showMessageDialog(null, playerTwoName + " Wins!");
                 disableAllButtons();
                 askToPlayAgain();
             });
