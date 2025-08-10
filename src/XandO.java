@@ -11,7 +11,6 @@ public class XandO {
     int draws = 0;
     boolean computerMode = false;
 
-
     ArrayList<Integer> playerOne = new ArrayList<>();
     ArrayList<Integer> playertwo = new ArrayList<>();
 
@@ -42,21 +41,23 @@ public class XandO {
     String playerOneName = "Player One";
     String playerTwoName = "Player Two";
 
+    // FIX: Keep reference to computer's timer so we can cancel it
+    Timer computerMoveTimer;
+
     // --- Homepage Method ---
     void showHomepage() {
         JFrame homepageFrame = new JFrame("X and O");
         homepageFrame.setSize(400, 300);
         homepageFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         homepageFrame.setResizable(false);
-        homepageFrame.setLocationRelativeTo(null); // Center the window
+        homepageFrame.setLocationRelativeTo(null);
 
         JPanel homepagePanel = new JPanel();
         homepagePanel.setBackground(Color.BLACK);
-        homepagePanel.setLayout(new GridBagLayout()); // Use GridBagLayout for centering content
+        homepagePanel.setLayout(new GridBagLayout());
 
         JLabel titleLabel = new JLabel();
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 100)); // Set font for the text
-        // Use HTML to apply specific colors to parts of the text
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 100));
         String htmlText = "<html><font color='green'>X</font><font color='white'>|</font><font color='red'>O</font></html>";
         titleLabel.setText(htmlText);
 
@@ -64,20 +65,16 @@ public class XandO {
         homepageFrame.add(homepagePanel);
         homepageFrame.setVisible(true);
 
-        // Timer to close homepage and open name input window after 2 seconds
         Timer timer = new Timer(5000, new ActionListener() {
-
             @Override
             public void actionPerformed(ActionEvent e) {
-                homepageFrame.dispose(); // Close homepage
-                getPlayerNames();         // Open name input window
+                homepageFrame.dispose();
+                getPlayerNames();
             }
         });
-        timer.setRepeats(false); // Ensure the timer only runs once
-        timer.start();           // Start the timer
+        timer.setRepeats(false);
+        timer.start();
     }
-    // --- End Homepage Method ---
-
 
     void getPlayerNames() {
         JPanel namePanel = new JPanel(new GridLayout(4, 2));
@@ -86,7 +83,8 @@ public class XandO {
         namePanel.add(new JLabel("Player Two Name:"));
         namePanel.add(playerTwoNameField);
 
-        JLabel instructionLabel = new JLabel("<html>Type '<b>Computer</b>' in Player Two's name field to play against the computer.</html>");
+        JLabel instructionLabel = new JLabel(
+                "<html>Type '<b>Computer</b>' in Player Two's name field to play against the computer.</html>");
         namePanel.add(instructionLabel);
         namePanel.add(new JLabel());
 
@@ -97,7 +95,7 @@ public class XandO {
         nameWindow.setSize(400, 180);
         nameWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         nameWindow.setVisible(true);
-        nameWindow.setLocationRelativeTo(null); // Center the name input window
+        nameWindow.setLocationRelativeTo(null);
 
         continueButton.addActionListener(new ActionListener() {
             @Override
@@ -108,8 +106,8 @@ public class XandO {
                     playerTwoName = "Computer";
                     computerMode = true;
                 }
-
-                if (playerOneName.isEmpty()) playerOneName = "Player One";
+                if (playerOneName.isEmpty())
+                    playerOneName = "Player One";
 
                 nameWindow.dispose();
                 drawgame();
@@ -117,19 +115,14 @@ public class XandO {
         });
     }
 
-
     void drawgame() {
-
-        // --- Apply styles to buttons ---
-        JButton[] buttons = {btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8, btn9};
+        JButton[] buttons = { btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8, btn9 };
         for (JButton btn : buttons) {
-            btn.setBackground(Color.BLACK); // Set background to black
-            btn.setBorder(new LineBorder(Color.WHITE, 2)); // Set white border with 2px thickness
-            btn.setFont(new Font("Arial", Font.BOLD, 40)); // Make X/O larger
-            btn.setFocusPainted(false); // Remove focus border on click
+            btn.setBackground(Color.BLACK);
+            btn.setBorder(new LineBorder(Color.WHITE, 2));
+            btn.setFont(new Font("Arial", Font.BOLD, 40));
+            btn.setFocusPainted(false);
         }
-        // --- End button styling ---
-
 
         myFrame.add(btn1);
         myFrame.add(btn2);
@@ -168,7 +161,6 @@ public class XandO {
                 }
             }
 
-            // Make overlay transparent to mouse events so clicks go to underlying buttons
             @Override
             public boolean contains(int x, int y) {
                 return false;
@@ -183,78 +175,98 @@ public class XandO {
         windows.add(myFrame);
         windows.setSize(300, 300);
         windows.setVisible(true);
-        windows.setLocationRelativeTo(null); // Center the game window
-
+        windows.setLocationRelativeTo(null);
     }
 
-
     void playerMove(JButton btn, int position) {
+        // DEBUG: log entry and current state
+        System.out.println("[DEBUG] playerMove called: pos=" + position + " flag=" + flag +
+                " playerOne=" + playerOne + " playertwo=" + playertwo);
+
+        if (!btn.isEnabled()) {
+            System.out.println("[DEBUG] button already disabled for pos=" + position + ", ignoring.");
+            return;
+        }
+
         if (flag == 0) {
             playerOne.add(position);
             btn.setText("X");
-            btn.setForeground(Color.GREEN); // Set X to green
+            btn.setForeground(Color.GREEN);
             btn.setEnabled(false);
             flag = 1;
             checkWin();
+
+            // Only schedule computer move if still not game over
             if (computerMode && !isGameOver()) {
-                // Only make computer move if the game isn't already over
-                Timer t = new Timer(250, e -> {
+                // FIX: stop previous timer before starting new
+                if (computerMoveTimer != null && computerMoveTimer.isRunning()) {
+                    System.out.println("[DEBUG] stopping previous computerMoveTimer before starting new one");
+                    computerMoveTimer.stop();
+                }
+                System.out.println("[DEBUG] scheduling computerMoveTimer (after player move)");
+                computerMoveTimer = new Timer(250, e -> {
                     ((Timer) e.getSource()).stop();
+                    System.out.println("[DEBUG] computerMoveTimer fired");
                     makeComputerMove();
                 });
-                t.setRepeats(false);
-                t.start();
+                computerMoveTimer.setRepeats(false);
+                computerMoveTimer.start();
             }
         } else {
             playertwo.add(position);
             btn.setText("O");
-            btn.setForeground(Color.RED); // Set O to red
+            btn.setForeground(Color.RED);
             btn.setEnabled(false);
             flag = 0;
             checkWin();
         }
+
+        // DEBUG: log exit state
+        System.out.println("[DEBUG] playerMove exit: flag=" + flag +
+                " playerOne=" + playerOne + " playertwo=" + playertwo);
     }
 
-    // Helper method to determine if the game has concluded (win or draw)
     boolean isGameOver() {
-        // Checking win for playerOne, then playerTwo, then for a draw
-        return (checkWinConditionOnly(playerOne) || checkWinConditionOnly(playertwo) || (playerOne.size() + playertwo.size()) == 9);
+        return (checkWinConditionOnly(playerOne) || checkWinConditionOnly(playertwo) ||
+                (playerOne.size() + playertwo.size()) == 9);
     }
 
     public static void main(String[] args) {
         XandO xando = new XandO();
-        xando.showHomepage(); // Start by showing the homepage
+        xando.showHomepage();
     }
 
     void checkWin() {
+        // FIX: stop any pending computer move immediately when a decisive condition
+        // occurs
+        if (computerMoveTimer != null && computerMoveTimer.isRunning()) {
+            System.out.println("[DEBUG] checkWin(): stopping computerMoveTimer because we are checking win/draw");
+            computerMoveTimer.stop();
+        }
+
         if (checkWinConditionOnly(playerOne)) {
             playerOneWins++;
             winningLine = getWinningCombination(playerOne);
-            // show overlay and repaint so the line appears on top
             if (overlay != null) {
                 overlay.setVisible(true);
                 overlay.repaint();
             }
-            // small pause to let the line draw before the dialog
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(null, playerOneName + " Wins!");
                 disableAllButtons();
                 askToPlayAgain();
             });
             return;
-
         }
         if (checkWinConditionOnly(playertwo)) {
             playerTwoWins++;
-            winningLine = getWinningCombination(playertwo);
-            // show overlay and repaint so the line appears on top
+            winningLine = getWinningCombination(playertwo); // keep correct moves
             if (overlay != null) {
                 overlay.setVisible(true);
                 overlay.repaint();
             }
-            // small pause to let the line draw before the dialog
             SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(null, playerTwoName + " Wins!");
+                JOptionPane.showMessageDialog(null, playerTwoName + " Wins!"); // show correct winner
                 disableAllButtons();
                 askToPlayAgain();
             });
@@ -262,20 +274,20 @@ public class XandO {
         }
         if ((playerOne.size() + playertwo.size()) == 9) {
             draws++;
-            JOptionPane.showMessageDialog(null, "It's a Draw!");
-            askToPlayAgain();
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(null, "It's a Draw!");
+                askToPlayAgain();
+            });
             return;
         }
     }
 
-    // New helper method to only check for win condition without dialogs or side effects
     boolean checkWinConditionOnly(ArrayList<Integer> playerMoves) {
         int[][] winCombinations = {
-                {1, 2, 3}, {4, 5, 6}, {7, 8, 9}, // Rows
-                {1, 4, 7}, {2, 5, 8}, {3, 6, 9}, // Columns
-                {1, 5, 9}, {3, 5, 7}             // Diagonals
+                { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 },
+                { 1, 4, 7 }, { 2, 5, 8 }, { 3, 6, 9 },
+                { 1, 5, 9 }, { 3, 5, 7 }
         };
-
         for (int[] combination : winCombinations) {
             if (playerMoves.contains(combination[0]) &&
                     playerMoves.contains(combination[1]) &&
@@ -288,9 +300,9 @@ public class XandO {
 
     int[] getWinningCombination(ArrayList<Integer> moves) {
         int[][] winCombinations = {
-                {1, 2, 3}, {4, 5, 6}, {7, 8, 9},
-                {1, 4, 7}, {2, 5, 8}, {3, 6, 9},
-                {1, 5, 9}, {3, 5, 7}
+                { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 },
+                { 1, 4, 7 }, { 2, 5, 8 }, { 3, 6, 9 },
+                { 1, 5, 9 }, { 3, 5, 7 }
         };
         for (int[] combo : winCombinations) {
             if (moves.contains(combo[0]) &&
@@ -303,7 +315,14 @@ public class XandO {
     }
 
     void askToPlayAgain() {
-        int choice = JOptionPane.showConfirmDialog(null, "Do you want to play again?", "Play Again?", JOptionPane.YES_NO_OPTION);
+        // FIX: stop pending timer before asking (extra safeguard)
+        if (computerMoveTimer != null && computerMoveTimer.isRunning()) {
+            System.out.println("[DEBUG] askToPlayAgain(): stopping computerMoveTimer as safeguard");
+            computerMoveTimer.stop();
+        }
+
+        int choice = JOptionPane.showConfirmDialog(null, "Do you want to play again?", "Play Again?",
+                JOptionPane.YES_NO_OPTION);
         if (choice == JOptionPane.YES_OPTION) {
             resetGame();
         } else {
@@ -312,16 +331,22 @@ public class XandO {
             System.exit(0);
         }
     }
+
     void resetGame() {
-        // Clear all button texts and reset appearance
-        JButton[] buttons = {btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8, btn9};
+        // FIX: stop pending computer move timer
+        if (computerMoveTimer != null && computerMoveTimer.isRunning()) {
+            System.out.println("[DEBUG] resetGame(): stopping running computerMoveTimer");
+            computerMoveTimer.stop();
+        } else {
+            System.out.println("[DEBUG] resetGame(): no running computerMoveTimer to stop");
+        }
+
+        JButton[] buttons = { btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8, btn9 };
         for (JButton btn : buttons) {
             btn.setText("");
             btn.setEnabled(true);
-            btn.setForeground(null); // Reset foreground color
+            btn.setForeground(null);
         }
-
-        // Clear player moves
         playerOne.clear();
         playertwo.clear();
         winningLine = null;
@@ -329,11 +354,11 @@ public class XandO {
             overlay.setVisible(false);
             overlay.repaint();
         }
-
-        // Reset turn flag
         flag = 0;
-    }
 
+        System.out.println(
+                "[DEBUG] resetGame completed: flag=" + flag + " playerOne=" + playerOne + " playertwo=" + playertwo);
+    }
 
     void disableAllButtons() {
         btn1.setEnabled(false);
@@ -346,35 +371,31 @@ public class XandO {
         btn8.setEnabled(false);
         btn9.setEnabled(false);
     }
+
     void showScoreboard() {
-        int playerOneLosses = playerTwoWins;
-        int playerTwoLosses = playerOneWins;
-
-        String scoreboard = playerOneName + "'s Record:\n"
-                + "Wins: " + playerOneWins + "\n\n"
-                + playerTwoName + "'s Record:\n"
-                + "Wins: " + playerTwoWins + "\n\n"
-                + "Draws: " + draws;
-
+        String scoreboard = playerOneName + "'s Record:\n" +
+                "Wins: " + playerOneWins + "\n\n" +
+                playerTwoName + "'s Record:\n" +
+                "Wins: " + playerTwoWins + "\n\n" +
+                "Draws: " + draws;
         JOptionPane.showMessageDialog(null, scoreboard, "Final Scoreboard", JOptionPane.INFORMATION_MESSAGE);
     }
+
     boolean isAvailable(int position) {
         return !(playerOne.contains(position) || playertwo.contains(position));
     }
+
     void makeComputerMove() {
-        // Step 1: Try to win
+        System.out.println("[DEBUG] makeComputerMove() called. Current state playerOne=" + playerOne + " playertwo="
+                + playertwo + " flag=" + flag);
+
         int move = getWinningMove(playertwo);
-        if (move == -1) {
-            // Step 2: Try to block player one
+        if (move == -1)
             move = getWinningMove(playerOne);
-        }
+        if (move == -1 && isAvailable(5))
+            move = 5;
         if (move == -1) {
-            // Step 3: Pick center
-            if (isAvailable(5)) move = 5;
-        }
-        if (move == -1) {
-            // Step 4: Pick corner
-            for (int i : new int[]{1, 3, 7, 9}) {
+            for (int i : new int[] { 1, 3, 7, 9 }) {
                 if (isAvailable(i)) {
                     move = i;
                     break;
@@ -382,8 +403,7 @@ public class XandO {
             }
         }
         if (move == -1) {
-            // Step 5: Pick side
-            for (int i : new int[]{2, 4, 6, 8}) {
+            for (int i : new int[] { 2, 4, 6, 8 }) {
                 if (isAvailable(i)) {
                     move = i;
                     break;
@@ -392,51 +412,68 @@ public class XandO {
         }
 
         if (move != -1) {
+            System.out.println("[DEBUG] makeComputerMove selected move=" + move);
             JButton targetButton = getButton(move);
-            playerMove(targetButton, move);
+            // guard: ensure target still enabled
+            if (targetButton != null && targetButton.isEnabled()) {
+                playerMove(targetButton, move);
+            } else {
+                System.out.println("[DEBUG] targetButton was null or already disabled for move=" + move);
+            }
+        } else {
+            System.out.println("[DEBUG] makeComputerMove found no available move (shouldn't happen)");
         }
     }
 
-
     int getWinningMove(ArrayList<Integer> playerMoves) {
         int[][] wins = {
-                {1,2,3},{4,5,6},{7,8,9},
-                {1,4,7},{2,5,8},{3,6,9},
-                {1,5,9},{3,5,7}
+                { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 },
+                { 1, 4, 7 }, { 2, 5, 8 }, { 3, 6, 9 },
+                { 1, 5, 9 }, { 3, 5, 7 }
         };
-
         for (int[] line : wins) {
             int count = 0, empty = -1;
             for (int pos : line) {
-                if (playerMoves.contains(pos)) count++;
-                else if (isAvailable(pos)) empty = pos;
+                if (playerMoves.contains(pos))
+                    count++;
+                else if (isAvailable(pos))
+                    empty = pos;
             }
-            if (count == 2 && empty != -1) return empty;
+            if (count == 2 && empty != -1)
+                return empty;
         }
         return -1;
     }
 
     JButton getButton(int position) {
-        switch(position) {
-            case 1: return btn1;
-            case 2: return btn2;
-            case 3: return btn3;
-            case 4: return btn4;
-            case 5: return btn5;
-            case 6: return btn6;
-            case 7: return btn7;
-            case 8: return btn8;
-            case 9: return btn9;
+        switch (position) {
+            case 1:
+                return btn1;
+            case 2:
+                return btn2;
+            case 3:
+                return btn3;
+            case 4:
+                return btn4;
+            case 5:
+                return btn5;
+            case 6:
+                return btn6;
+            case 7:
+                return btn7;
+            case 8:
+                return btn8;
+            case 9:
+                return btn9;
         }
         return null;
     }
 
     Point getButtonCenter(int position, Component relativeTo) {
         JButton btn = getButton(position);
-        if (btn == null) return new Point(0, 0);
+        if (btn == null)
+            return new Point(0, 0);
         return SwingUtilities.convertPoint(btn, btn.getWidth() / 2, btn.getHeight() / 2, relativeTo);
     }
 }
-
-
 
