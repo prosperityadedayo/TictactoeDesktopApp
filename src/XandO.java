@@ -1,6 +1,6 @@
 import com.sun.speech.freetts.Voice;
 import com.sun.speech.freetts.VoiceManager;
-
+import java.util.List;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import javax.swing.border.LineBorder;
 import javax.swing.border.EmptyBorder;
 import java.awt.event.*;
+import java.util.Random;
 
 public class XandO {
     int playerOneWins = 0;
@@ -18,6 +19,9 @@ public class XandO {
 
     ArrayList<Integer> playerOne = new ArrayList<>();
     ArrayList<Integer> playertwo = new ArrayList<>();
+    List<FallingEmoji> fallingEmojis = new ArrayList<>();
+    Timer fallingTimer;
+    Random random = new Random();
 
 
     int flag = 0;
@@ -218,6 +222,10 @@ public class XandO {
                     Point p2 = getButtonCenter(winningLine[2], this);
                     g2.drawLine(p1.x, p1.y, p2.x, p2.y);
                     g2.dispose();
+                    for (FallingEmoji fe : fallingEmojis) {
+                        g.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+                        g.drawString(fe.emoji, fe.x, fe.y);
+                    }
                 }
             }
 
@@ -326,6 +334,7 @@ public class XandO {
             }
             SwingUtilities.invokeLater(() -> {
                 VoiceHelper.speak(playerOneName + " wins!");
+                startFallingReaction("🎉, ⭐");
                 ThemeManager.showThemedMessage(windows, playerOneName + " Wins!", "Winner");
                 disableAllButtons();
                 askToPlayAgain();
@@ -341,6 +350,7 @@ public class XandO {
             }
             SwingUtilities.invokeLater(() -> {
                 VoiceHelper.speak(playerTwoName + " wins!");
+                startFallingReaction("🎉, ⭐");
                 ThemeManager.showThemedMessage(windows, playerTwoName + " Wins!", "Winner");
                 disableAllButtons();
                 askToPlayAgain();
@@ -356,6 +366,36 @@ public class XandO {
             });
         }
     }
+    void startFallingReaction(String emoji) {
+        fallingEmojis.clear();
+        int width = windows.getWidth();
+        // Create multiple falling emojis
+        for (int i = 0; i < 20; i++) {
+            int x = random.nextInt(width - 50);
+            int speed = 2 + random.nextInt(50);
+            fallingEmojis.add(new FallingEmoji(emoji, x, 0, speed));
+        }
+
+        if (fallingTimer != null && fallingTimer.isRunning()) {
+            fallingTimer.stop();
+        }
+
+        fallingTimer = new Timer(30, e -> {
+            for (FallingEmoji fe : fallingEmojis) {
+                fe.y += fe.speed;
+            }
+            overlay.repaint();
+        });
+        fallingTimer.start();
+
+        // Stop after 4 seconds
+        new Timer(4000, e -> {
+            fallingTimer.stop();
+            fallingEmojis.clear();
+            overlay.repaint();
+        }).start();
+    }
+
 
     boolean checkWinConditionOnly(ArrayList<Integer> playerMoves) {
         int[][] winCombinations = {
@@ -589,4 +629,16 @@ public class XandO {
             }).start();
         }
     }
+    class FallingEmoji {
+        String emoji;
+        int x, y, speed;
+
+        FallingEmoji(String emoji, int x, int y, int speed) {
+            this.emoji = emoji;
+            this.x = x;
+            this.y = y;
+            this.speed = speed;
+        }
+    }
+
 }

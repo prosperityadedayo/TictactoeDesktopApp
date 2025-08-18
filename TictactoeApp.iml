@@ -61,5 +61,6 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="javadoc" level="project" />
   </component>
 </module>
