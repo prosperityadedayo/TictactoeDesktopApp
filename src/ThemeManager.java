@@ -171,7 +171,7 @@ public class ThemeManager {
         if (baseFont == null) {
             baseFont = UIManager.getFont("Button.font");
             if (baseFont == null) {
-                baseFont = new Font("Segoe UI", Font.PLAIN, 13); // final fallback
+                baseFont = new Font("Segoe UI Emoji", Font.PLAIN, 13); // final fallback
             }
             b.setFont(baseFont);
         }

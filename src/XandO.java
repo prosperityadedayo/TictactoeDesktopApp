@@ -170,7 +170,7 @@ public class XandO {
                 computerMode = true;
             }
             if (playerOneName.isEmpty()) playerOneName = "Player One";
-
+            AvatarManager.get().showAvatarSelection(nameWindow);
             nameWindow.dispose();
             drawgame();
         });
@@ -276,7 +276,7 @@ public class XandO {
 
         if (flag == 0) {
             playerOne.add(position);
-            btn.setText("X");
+            btn.setText(AvatarManager.get().getPlayer1Avatar());
             btn.setForeground(ThemeManager.get().colors().xColor);
             btn.setEnabled(false);
             flag = 1;
@@ -298,7 +298,7 @@ public class XandO {
             }
         } else {
             playertwo.add(position);
-            btn.setText("O");
+            btn.setText(AvatarManager.get().getPlayer2Avatar());
             btn.setForeground(ThemeManager.get().colors().oColor);
             btn.setEnabled(false);
             flag = 0;
